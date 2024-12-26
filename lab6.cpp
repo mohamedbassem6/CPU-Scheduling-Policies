@@ -47,7 +47,7 @@ void build_timeline(vector<ProcessTrace>& trace) {
     }
 
     for (Process& p : processes) {
-        for (int i = p.arrival_time; i <= p.finish_time; i++) {
+        for (int i = p.arrival_time; i < p.finish_time; i++) {
             if (p.timeline[i] == ' ') {
                 p.timeline[i] = '.';
             }
@@ -55,7 +55,7 @@ void build_timeline(vector<ProcessTrace>& trace) {
     }
 }
 
-void trace(vector<ProcessTrace>& trace, string policy_name) {
+void print_trace(vector<ProcessTrace>& trace, string policy_name) {
     build_timeline(trace);
 
     cout << left << setw(6) << policy_name;
@@ -81,6 +81,55 @@ void trace(vector<ProcessTrace>& trace, string policy_name) {
         cout << "-";
     }
     cout << endl << endl;
+}
+
+void print_stats(string policy_name) {
+    cout << policy_name << endl;
+
+    cout << "Process    |";
+    for (Process& p : processes) {
+        cout << "  " << p.name << "  |";
+    }
+    cout << endl;
+
+    cout << "Arrival    |";
+    for (Process& p : processes) {
+        cout << right << setw(3) << p.arrival_time << "  |";
+    }
+    cout << endl;
+
+    cout << "Service    |";
+    for (Process& p : processes) {
+        cout << right << setw(3) << p.st_p << "  |";
+    }
+    cout << " Mean|" << endl;
+
+    cout << "Finish     |";
+    for (Process& p : processes) {
+        cout << right << setw(3) << p.finish_time << "  |";
+    }
+    cout << "-----|" << endl;
+
+    cout << "Turnaround |";
+    double sum = 0;
+    for (Process& p : processes) {
+        double turnaround = p.finish_time - p.arrival_time;
+        cout << right << setw(3) << turnaround << "  |";
+
+        sum += turnaround;
+    }
+    cout << " " << fixed << setprecision(2) << sum / processes.size() << "|" << endl;
+
+    cout << "NormTurn   |";
+    sum = 0;
+    for (Process& p : processes) {
+        double norm_turn = (p.finish_time - p.arrival_time) / (double)p.st_p;
+        cout << " " << fixed << setprecision(2) << norm_turn << "|";
+
+        sum += norm_turn;
+    }
+    cout << " " << fixed << setprecision(2) << sum / processes.size() << "|" << endl;
+    cout << endl;
 }
 
 ////////////////////////////
@@ -119,7 +168,7 @@ vector<ProcessTrace> FCFS_Scheduler() {
 
             fcfs.time += current_process->remaining_time;
             current_process->remaining_time = 0;
-            current_process->finish_time = pt.end_time;
+            current_process->finish_time = fcfs.time;
 
             fcfs.q.pop();
         } else {
@@ -163,7 +212,7 @@ vector<ProcessTrace> RR_Scheduler(int quantum) {
 
         // Preemption
         if (current_process->remaining_time == 0 || remaining_quantum == 0) {
-            current_process->finish_time = rr.time;
+            current_process->finish_time = rr.time + 1;
 
             ProcessTrace pt(current_process, rr.time - (quantum - remaining_quantum) + 1, rr.time);
             trace.push_back(pt);
@@ -233,7 +282,9 @@ int main() {
     }
 
     if (is_trace) {
-        trace(process_trace, scheduler_name[scheduler_type]);
+        print_trace(process_trace, scheduler_name[scheduler_type]);
+    } else {
+        print_stats(scheduler_name[scheduler_type]);
     }
 
     return 0;
