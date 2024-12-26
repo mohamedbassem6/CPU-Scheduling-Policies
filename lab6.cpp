@@ -39,7 +39,7 @@ struct ProcessTrace {
         : p(process), start_time(start), end_time(end) {}
 };
 
-void update_timeline(vector<ProcessTrace>& trace) {
+void build_timeline(vector<ProcessTrace>& trace) {
     for (ProcessTrace& pt : trace) {
         for (int i = pt.start_time; i <= pt.end_time; i++) {
             pt.p->timeline[i] = '*';
@@ -56,7 +56,7 @@ void update_timeline(vector<ProcessTrace>& trace) {
 }
 
 void trace(vector<ProcessTrace>& trace, string policy_name) {
-    update_timeline(trace);
+    build_timeline(trace);
 
     cout << left << setw(6) << policy_name;
     for (int i = 0; i <= total_time; i++) {
@@ -64,7 +64,7 @@ void trace(vector<ProcessTrace>& trace, string policy_name) {
     }
     cout << endl;
 
-    for (int i = 0; i <= total_time * 2 + 6; i++) {
+    for (int i = 0; i <= total_time * 2 + 7; i++) {
         cout << "-";
     }
     cout << endl;
@@ -77,10 +77,10 @@ void trace(vector<ProcessTrace>& trace, string policy_name) {
         cout << "| " << endl;
     }
 
-    for (int i = 0; i <= total_time * 2 + 6; i++) {
+    for (int i = 0; i <= total_time * 2 + 7; i++) {
         cout << "-";
     }
-    cout << endl;
+    cout << endl << endl;
 }
 
 ////////////////////////////
@@ -149,32 +149,40 @@ vector<ProcessTrace> RR_Scheduler(int quantum) {
     });
 
     int i = 0;
-    rr.q.push(&processes[i++]);
-    while (rr.time <= total_time) {
-        while (i < processes.size() && processes[i].arrival_time <= rr.time) {
-            rr.q.push(&processes[i]);
-            i++;
-        }
+    while (i < processes.size() && processes[i].arrival_time == 0) {
+            rr.q.push(&processes[i++]);
+    }
 
+    int remaining_quantum = quantum;
+    while (rr.time <= total_time) {
         if (rr.q.empty())   break;
         
         Process* current_process = rr.q.front();
-        int exec_time = min(quantum, current_process->remaining_time);
+        current_process->remaining_time--;
+        remaining_quantum--;
 
-        ProcessTrace pt(current_process, rr.time, rr.time + exec_time - 1);
-        trace.push_back(pt);
-
-        current_process->remaining_time -= exec_time;
-
-        if (current_process->remaining_time == 0) {
+        // Preemption
+        if (current_process->remaining_time == 0 || remaining_quantum == 0) {
             current_process->finish_time = rr.time;
+
+            ProcessTrace pt(current_process, rr.time - (quantum - remaining_quantum) + 1, rr.time);
+            trace.push_back(pt);
+
             rr.q.pop();
-        } else {    // If the process is not finished, push it to the back of the queue
-            rr.q.pop();
+            remaining_quantum = quantum;
+        }
+
+        rr.time++;
+
+        // Check if there are any processes that have arrived
+        while (i < processes.size() && rr.time == processes[i].arrival_time) {
+            rr.q.push(&processes[i++]);
+        }
+
+        // Add the current process to the queue if it still has remaining time
+        if (current_process->remaining_time > 0) {
             rr.q.push(current_process);
         }
-        
-        rr.time += exec_time;
     }
 
     return trace;
