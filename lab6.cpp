@@ -222,6 +222,7 @@ vector<ProcessTrace> RR_Scheduler(int quantum) {
         remaining_quantum--;
 
         // Preemption
+        bool preempted = false;
         if (current_process->remaining_time == 0 || remaining_quantum == 0) {
             current_process->finish_time = rr.time + 1;
 
@@ -230,6 +231,7 @@ vector<ProcessTrace> RR_Scheduler(int quantum) {
 
             rr.q.pop();
             remaining_quantum = quantum;
+            preempted = true;
         }
 
         rr.time++;
@@ -240,7 +242,7 @@ vector<ProcessTrace> RR_Scheduler(int quantum) {
         }
 
         // Add the current process to the queue if it still has remaining time
-        if (current_process->remaining_time > 0) {
+        if (preempted && current_process->remaining_time > 0) {
             rr.q.push(current_process);
         }
     }
