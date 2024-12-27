@@ -133,17 +133,17 @@ void print_stats(string policy_name) {
 
         sum += turnaround;
     }
-    cout << " " << fixed << setprecision(2) << sum / processes.size() << "|" << endl;
+    cout << right << setw(5) << fixed << setprecision(2) << sum / processes.size() << "|" << endl;
 
     cout << "NormTurn   |";
     sum = 0;
     for (Process& p : processes) {
         double norm_turn = (p.finish_time - p.arrival_time) / (double)p.st_p;
-        cout << " " << fixed << setprecision(2) << norm_turn << "|";
+        cout << right << setw(5) << fixed << setprecision(2) << norm_turn << "|";
 
         sum += norm_turn;
     }
-    cout << " " << fixed << setprecision(2) << sum / processes.size() << "|" << endl;
+    cout << right << setw(5) << fixed << setprecision(2) << sum / processes.size() << "|" << endl;
     cout << endl;
 }
 
@@ -289,8 +289,8 @@ int main() {
 
     int scheduler_type, quantum;
     char dash;
-    // cin >> scheduler_type >> dash >> quantum;
-    cin >> scheduler_type;
+    cin >> scheduler_type >> dash >> quantum;
+    // cin >> scheduler_type;
 
     cin >> total_time;
 
