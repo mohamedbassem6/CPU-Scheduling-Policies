@@ -4,6 +4,9 @@
 #include <string>
 #include <queue>
 #include <map>
+#include <vector>
+#include <algorithm>
+#include <unordered_map>
 
 using namespace std;
 
@@ -26,6 +29,18 @@ typedef struct {
     int finish_time;
     vector<char> timeline;
 } Process;
+
+struct ShortestProcessComparator {
+    bool operator()(const Process* a, const Process* b) const {
+        return a->st_p > b->st_p;
+    }
+};
+
+struct ArrivalTimeComparator {
+    bool operator()(const Process& a, const Process& b) {
+        return a.arrival_time < b.arrival_time;
+    }
+};
 
 vector<Process> processes;
 int total_time;
@@ -147,9 +162,7 @@ vector<ProcessTrace> FCFS_Scheduler() {
     vector<ProcessTrace> trace;
 
     // Sort processes by arrival time
-    sort(processes.begin(), processes.end(), [](Process a, Process b) {
-        return a.arrival_time < b.arrival_time;
-    });
+    sort(processes.begin(), processes.end(), ArrivalTimeComparator());
 
     // Push pointers to processes into the queue
     for (Process& process : processes) {
@@ -193,9 +206,7 @@ vector<ProcessTrace> RR_Scheduler(int quantum) {
     vector<ProcessTrace> trace;
 
     // Sort processes by arrival time
-    sort(processes.begin(), processes.end(), [](Process a, Process b) {
-        return a.arrival_time < b.arrival_time;
-    });
+    sort(processes.begin(), processes.end(), ArrivalTimeComparator());
 
     int i = 0;
     while (i < processes.size() && processes[i].arrival_time == 0) {
@@ -237,6 +248,40 @@ vector<ProcessTrace> RR_Scheduler(int quantum) {
     return trace;
 }
 
+///////////////////////////
+// Shortest Process Next //
+///////////////////////////
+vector<ProcessTrace> SPN_Scheduler() {
+    vector<ProcessTrace> trace;
+
+    priority_queue<Process*, vector<Process*>, ShortestProcessComparator> pq;
+
+    // Sort processes by arrival time
+    sort(processes.begin(), processes.end(), ArrivalTimeComparator());
+
+    int time = 0;
+    int i = 0;
+    while (time <= total_time) {
+        while (i < processes.size() && processes[i].arrival_time <= time) {
+            pq.push(&processes[i++]);
+        }
+
+        if (pq.empty()) break;
+
+        Process* current_process = pq.top();
+        current_process->remaining_time = 0;
+        current_process->finish_time = time + current_process->st_p;
+
+        ProcessTrace pt(current_process, time, current_process->finish_time - 1);
+        trace.push_back(pt);
+
+        pq.pop();
+        time += current_process->st_p;
+    }
+
+    return trace;
+}
+
 int main() {
     string output_type;
     cin >> output_type;
@@ -244,8 +289,8 @@ int main() {
 
     int scheduler_type, quantum;
     char dash;
-    cin >> scheduler_type >> dash >> quantum;
-    // cin >> scheduler_type;
+    // cin >> scheduler_type >> dash >> quantum;
+    cin >> scheduler_type;
 
     cin >> total_time;
 
@@ -278,6 +323,7 @@ int main() {
             process_trace = RR_Scheduler(quantum);
             break;
         case 3:
+            process_trace = SPN_Scheduler();
             break;
     }
 
