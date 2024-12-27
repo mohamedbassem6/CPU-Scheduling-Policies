@@ -10,6 +10,45 @@
 
 using namespace std;
 
+typedef struct {
+    char name;
+    int arrival_time;
+    int st_p;
+    int remaining_time;
+    int finish_time;
+    vector<char> timeline;
+} Process;
+
+////////////////////////
+// Custom Comparators //
+////////////////////////
+struct ShortestProcessComparator {
+    bool operator()(const Process* a, const Process* b) const {
+        if (a->st_p == b->st_p) {
+            return a->arrival_time > b->arrival_time;
+        }
+        return a->st_p > b->st_p;
+    }
+};
+
+struct ShortestRTComparator {
+    bool operator()(const Process* a, const Process* b) const {
+        if (a->remaining_time == b->remaining_time) {
+            return a->arrival_time > b->arrival_time;
+        }
+        return a->remaining_time > b->remaining_time;
+    }
+};
+
+struct ArrivalTimeComparator {
+    bool operator()(const Process& a, const Process& b) {
+        return a.arrival_time < b.arrival_time;
+    }
+};
+
+//////////////////////
+// Global variables //
+//////////////////////
 unordered_map<int, string> scheduler_name = {
     {1, "FCFS"},
     {2, "RR"},
@@ -20,31 +59,12 @@ unordered_map<int, string> scheduler_name = {
     {7, "FB-2i"},
     {8, "Aging"}
 };
-
-typedef struct {
-    char name;
-    int arrival_time;
-    int st_p;
-    int remaining_time;
-    int finish_time;
-    vector<char> timeline;
-} Process;
-
-struct ShortestProcessComparator {
-    bool operator()(const Process* a, const Process* b) const {
-        return a->st_p > b->st_p;
-    }
-};
-
-struct ArrivalTimeComparator {
-    bool operator()(const Process& a, const Process& b) {
-        return a.arrival_time < b.arrival_time;
-    }
-};
-
 vector<Process> processes;
 int total_time;
 
+//////////////////////
+// Output Utilities //
+//////////////////////
 struct ProcessTrace {
     Process* p;
     int start_time, end_time;
@@ -147,9 +167,9 @@ void print_stats(string policy_name) {
     cout << endl;
 }
 
-////////////////////////////
-// First Come First Serve //
-////////////////////////////
+////////////////////////
+// Scheduling Policies//
+////////////////////////
 vector<ProcessTrace> FCFS_Scheduler() {
     int time = 0;
 
@@ -179,9 +199,6 @@ vector<ProcessTrace> FCFS_Scheduler() {
     return trace;
 }
 
-/////////////////
-// Round Robin //
-/////////////////
 vector<ProcessTrace> RR_Scheduler(int quantum) {
     int time = 0;
     queue<Process*> q;
@@ -233,9 +250,6 @@ vector<ProcessTrace> RR_Scheduler(int quantum) {
     return trace;
 }
 
-///////////////////////////
-// Shortest Process Next //
-///////////////////////////
 vector<ProcessTrace> SPN_Scheduler() {
     vector<ProcessTrace> trace;
 
@@ -262,6 +276,40 @@ vector<ProcessTrace> SPN_Scheduler() {
 
         pq.pop();
         time += current_process->st_p;
+    }
+
+    return trace;
+}
+
+vector<ProcessTrace> SRT_Scheduler() {
+    vector<ProcessTrace> trace;
+
+    priority_queue<Process*, vector<Process*>, ShortestRTComparator> pq;
+
+    // Sort processes by arrival time
+    sort(processes.begin(), processes.end(), ArrivalTimeComparator());
+
+    int time = 0;
+    int i = 0;
+    while (time <= total_time) {
+        while (i < processes.size() && processes[i].arrival_time <= time) {
+            pq.push(&processes[i++]);
+        }
+
+        if (pq.empty()) break;
+
+        Process* current_process = pq.top();
+        current_process->remaining_time--;
+
+        ProcessTrace pt(current_process, time, time);
+        trace.push_back(pt);
+
+        if (current_process->remaining_time == 0) {
+            current_process->finish_time = time + 1;
+            pq.pop();
+        }
+
+        time++;
     }
 
     return trace;
@@ -309,6 +357,9 @@ int main() {
             break;
         case 3:
             process_trace = SPN_Scheduler();
+            break;
+        case 4:
+            process_trace = SRT_Scheduler();
             break;
     }
 
