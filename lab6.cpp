@@ -150,58 +150,41 @@ void print_stats(string policy_name) {
 ////////////////////////////
 // First Come First Serve //
 ////////////////////////////
-typedef struct {
-    queue<Process*> q;
-    int time;
-} FCFS;
-
 vector<ProcessTrace> FCFS_Scheduler() {
-    FCFS fcfs;
-    fcfs.time = 0;
-
-    vector<ProcessTrace> trace;
+    int time = 0;
 
     // Sort processes by arrival time
     sort(processes.begin(), processes.end(), ArrivalTimeComparator());
 
-    // Push pointers to processes into the queue
-    for (Process& process : processes) {
-        fcfs.q.push(&process);
-    }
+    vector<ProcessTrace> trace;
 
-    while (fcfs.time <= total_time) {
-        if (fcfs.q.empty())
-            break;
+    int i = 0;
+    while (i < processes.size() && time <= total_time) {
+        Process* current_process = &processes[i];
 
-        Process* current_process = fcfs.q.front();
-
-        if (fcfs.time >= current_process->arrival_time) {
-            ProcessTrace pt(current_process, fcfs.time, fcfs.time + current_process->st_p - 1);
+        if (time >= current_process->arrival_time) {
+            ProcessTrace pt(current_process, time, time + current_process->st_p - 1);
             trace.push_back(pt);
 
-            fcfs.time += current_process->remaining_time;
+            time += current_process->remaining_time;
             current_process->remaining_time = 0;
-            current_process->finish_time = fcfs.time;
+            current_process->finish_time = time;
 
-            fcfs.q.pop();
+            i++;
         } else {
-            fcfs.time++;
+            time++;
         }
     }
+
     return trace;
 }
 
 /////////////////
 // Round Robin //
 /////////////////
-typedef struct {
-    queue<Process*> q;
-    int time;
-} RR;
-
 vector<ProcessTrace> RR_Scheduler(int quantum) {
-    RR rr;
-    rr.time = 0;
+    int time = 0;
+    queue<Process*> q;
 
     vector<ProcessTrace> trace;
 
@@ -210,40 +193,40 @@ vector<ProcessTrace> RR_Scheduler(int quantum) {
 
     int i = 0;
     while (i < processes.size() && processes[i].arrival_time == 0) {
-            rr.q.push(&processes[i++]);
+            q.push(&processes[i++]);
     }
 
     int remaining_quantum = quantum;
-    while (rr.time <= total_time) {
-        if (rr.q.empty())   break;
+    while (time <= total_time) {
+        if (q.empty())   break;
         
-        Process* current_process = rr.q.front();
+        Process* current_process = q.front();
         current_process->remaining_time--;
         remaining_quantum--;
 
         // Preemption
         bool preempted = false;
         if (current_process->remaining_time == 0 || remaining_quantum == 0) {
-            current_process->finish_time = rr.time + 1;
+            current_process->finish_time = time + 1;
 
-            ProcessTrace pt(current_process, rr.time - (quantum - remaining_quantum) + 1, rr.time);
+            ProcessTrace pt(current_process, time - (quantum - remaining_quantum) + 1, time);
             trace.push_back(pt);
 
-            rr.q.pop();
+            q.pop();
             remaining_quantum = quantum;
             preempted = true;
         }
 
-        rr.time++;
+        time++;
 
         // Check if there are any processes that have arrived
-        while (i < processes.size() && rr.time == processes[i].arrival_time) {
-            rr.q.push(&processes[i++]);
+        while (i < processes.size() && time == processes[i].arrival_time) {
+            q.push(&processes[i++]);
         }
 
         // Add the current process to the queue if it still has remaining time
         if (preempted && current_process->remaining_time > 0) {
-            rr.q.push(current_process);
+            q.push(current_process);
         }
     }
 
@@ -291,8 +274,8 @@ int main() {
 
     int scheduler_type, quantum;
     char dash;
-    cin >> scheduler_type >> dash >> quantum;
-    // cin >> scheduler_type;
+    // cin >> scheduler_type >> dash >> quantum;
+    cin >> scheduler_type;
 
     cin >> total_time;
 
