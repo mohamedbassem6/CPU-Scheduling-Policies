@@ -7,6 +7,7 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -315,6 +316,47 @@ vector<ProcessTrace> SRT_Scheduler() {
     return trace;
 }
 
+vector<ProcessTrace> HRRN_Scheduler() {
+    vector<ProcessTrace> trace;
+
+    // Sort processes by arrival time
+    sort(processes.begin(), processes.end(), ArrivalTimeComparator());
+
+    unordered_set<Process*> ready_processes;
+    
+    int time = 0;
+    int i = 0;
+    while (time <= total_time) {
+        while (i < processes.size() && processes[i].arrival_time <= time) {
+            ready_processes.insert(&processes[i++]);
+        }
+
+        if (ready_processes.empty()) break;
+
+        // Get the process with the highest response ratio
+        Process* current_process;
+        double max_hrr = -1;
+        for (Process* p : ready_processes) {
+            double hrr = (time - p->arrival_time + p->st_p) / (double)p->st_p;
+            if (hrr > max_hrr) {
+                max_hrr = hrr;
+                current_process = p;
+            }
+        }
+        
+        ProcessTrace pt(current_process, time, time + current_process->st_p - 1);
+        trace.push_back(pt);
+
+        time += current_process->st_p;
+
+        current_process->finish_time = time;
+        current_process->remaining_time = 0;
+        ready_processes.erase(current_process);
+    }
+
+    return trace;
+}
+
 int main() {
     string output_type;
     cin >> output_type;
@@ -360,6 +402,15 @@ int main() {
             break;
         case 4:
             process_trace = SRT_Scheduler();
+            break;
+        case 5:
+            process_trace = HRRN_Scheduler();
+            break;
+        case 6:
+            break;
+        case 7:
+            break;
+        case 8:
             break;
     }
 
